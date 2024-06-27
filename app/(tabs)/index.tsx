@@ -1,70 +1,154 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import {SafeAreaView,View,Text,TextInput,TouchableOpacity,FlatList,StyleSheet,Switch} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+type Task = {
+  id: string;
+  title: string;
+  status: 'due' | 'done';
+};
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+const TodoApp = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+
+  const handleAddTask = () => {
+    if (newTaskTitle.trim()) {
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title: newTaskTitle,
+        status: 'due',
+      };
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+      setNewTaskTitle('');
+    }
+  };
+
+  const handleToggleTaskStatus = (id: string) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === id
+          ? { ...task, status: task.status === 'due' ? 'done' : 'due' }
+          : task
+      )
+    );
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
+  };
+
+  const renderTask = ({ item }: { item: Task }) => (
+    <View style={styles.taskContainer}>
+      <View style={styles.taskDetails}>
+        <Text style={styles.taskTitle}>{item.title}</Text>
+        <Text style={styles.taskStatus}>{item.status === 'done' ? 'Done' : 'Due'}</Text>
+      </View>
+      <View style={styles.taskControls}>
+        <Switch
+          value={item.status === 'done'}
+          onValueChange={() => handleToggleTaskStatus(item.id)}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <TouchableOpacity onPress={() => handleDeleteTask(item.id)}>
+          <Icon name="delete" size={24} color="#ff4757" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
-}
+
+  return (
+    <SafeAreaView style={styles.mainContainer}>
+      <Text style={styles.title}>Todo List</Text>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={styles.inputField}
+          placeholder="Enter task"
+          value={newTaskTitle}
+          onChangeText={setNewTaskTitle}
+        />
+        <TouchableOpacity
+          style={[
+            styles.addButton,
+            { backgroundColor: newTaskTitle.trim() ? '#ff6348' : '#f1a5a0' },
+          ]}
+          onPress={handleAddTask}
+          disabled={!newTaskTitle.trim()}
+        >
+          <Text style={styles.addButtonText}>Add</Text>
+        </TouchableOpacity>
+      </View>
+      <FlatList
+        data={tasks}
+        renderItem={renderTask}
+        keyExtractor={(item) => item.id}
+      />
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  mainContainer: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#fff0f0',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#d9534f',
+  },
+  inputWrapper: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  inputField: {
+    width: '80%',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    height: 40,
+  },
+  addButton: {
+    width: '80%',
+    padding: 10,
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  taskContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    padding: 15,
+    borderColor: '#eee',
+    borderWidth: 1,
+    borderRadius: 10,
+    backgroundColor: '#ffe3e3',
+    marginBottom: 10,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  taskDetails: {
+    flex: 1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  taskStatus: {
+    fontSize: 14,
+    color: '#b5651d',
+  },
+  taskControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
+
+export default TodoApp;
