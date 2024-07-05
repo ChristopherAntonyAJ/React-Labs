@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
-import {SafeAreaView,View,Text,TextInput,TouchableOpacity,FlatList,StyleSheet,Switch} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Switch } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import app from '../../FirebaseConfig';
+
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+
+const firestore = getFirestore(app);
 
 type Task = {
   id: string;
@@ -12,30 +17,44 @@ const TodoApp = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
-  const handleAddTask = () => {
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(firestore, 'tasks'), (querySnapshot) => {
+      const tasks: Task[] = [];
+      querySnapshot.forEach((documentSnapshot) => {
+        const data = documentSnapshot.data();
+        tasks.push({
+          id: documentSnapshot.id,
+          title: data.title,
+          status: data.status,
+        });
+      });
+      setTasks(tasks);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddTask = async () => {
     if (newTaskTitle.trim()) {
-      const newTask: Task = {
-        id: Date.now().toString(),
+      const newTask = {
         title: newTaskTitle,
         status: 'due',
       };
-      setTasks((prevTasks) => [...prevTasks, newTask]);
+      await addDoc(collection(firestore, 'tasks'), newTask);
       setNewTaskTitle('');
     }
   };
 
-  const handleToggleTaskStatus = (id: string) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === id
-          ? { ...task, status: task.status === 'due' ? 'done' : 'due' }
-          : task
-      )
-    );
+  const handleToggleTaskStatus = async (id: string) => {
+    const task = tasks.find((task) => task.id === id);
+    if (task) {
+      const updatedStatus = task.status === 'due' ? 'done' : 'due';
+      await updateDoc(doc(firestore, 'tasks', id), { status: updatedStatus });
+    }
   };
 
-  const handleDeleteTask = (id: string) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
+  const handleDeleteTask = async (id: string) => {
+    await deleteDoc(doc(firestore, 'tasks', id));
   };
 
   const renderTask = ({ item }: { item: Task }) => (
@@ -152,4 +171,3 @@ const styles = StyleSheet.create({
 });
 
 export default TodoApp;
-
